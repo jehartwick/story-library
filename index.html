@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Story Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F4F1E9;
+    --cream-line: #E2DCC9;
+    --ink-text: #2D2822;
+    --ink-text-soft: #6B6258;
+    --navy: #213C68;
+    --navy-soft: #5A7099;
+    --danger: #A14B3E;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    background: var(--cream);
+    font-family: 'Inter', sans-serif;
+    color: var(--ink-text);
+  }
+  body { display: flex; justify-content: center; }
+  .app-shell {
+    width: 100%;
+    max-width: 560px;
+    min-height: 100vh;
+    padding: 24px 20px 80px;
+    background: #FFFFFF;
+  }
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 14px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--cream-line);
+  }
+  .app-title {
+    font-family: 'EB Garamond', serif;
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+  }
+  .sync-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--navy-soft);
+    color: var(--navy);
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .sync-btn:active { opacity: 0.7; }
+  .sync-status {
+    font-size: 11px;
+    color: var(--ink-text-soft);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 14px;
+  }
+  .sync-status .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--navy-soft);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .search-wrap { margin-bottom: 18px; }
+  .search {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink-text);
+    background: transparent;
+    border: 1px solid var(--cream-line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .search::placeholder { color: var(--ink-text-soft); }
+  .search:focus { border-color: var(--navy-soft); }
+
+  .entry-box {
+    border: 1px solid var(--cream-line);
+    border-radius: 6px;
+    padding: 12px 14px 10px;
+    margin-bottom: 26px;
+  }
+  .entry-box textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    color: var(--ink-text);
+    line-height: 1.5;
+    min-height: 44px;
+  }
+  .entry-box textarea::placeholder { color: var(--ink-text-soft); }
+  .entry-box .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    gap: 10px;
+  }
+  .loc-input {
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-text-soft);
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+  .loc-input::placeholder { color: var(--ink-text-soft); opacity: 0.7; }
+  .save-pill {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cream);
+    background: var(--navy);
+    padding: 7px 16px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .save-pill:disabled { background: var(--cream-line); color: var(--ink-text-soft); cursor: default; }
+
+  .empty-state {
+    font-family: 'EB Garamond', serif;
+    font-size: 16px;
+    color: var(--ink-text-soft);
+    padding: 30px 4px;
+    text-align: center;
+  }
+
+  .day-group { border-bottom: 1px solid var(--cream-line); }
+  .day-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 13px 2px;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    cursor: pointer;
+    user-select: none;
+  }
+  .day-label .date { color: var(--navy); font-weight: 600; }
+  .day-label .dow { color: var(--ink-text-soft); font-weight: 400; }
+  .day-label .count { color: var(--ink-text-soft); font-size: 12px; margin-left: 2px; }
+  .day-label .chevron {
+    margin-left: auto;
+    color: var(--ink-text-soft);
+    font-size: 11px;
+    transition: transform 0.15s ease;
+  }
+  .day-group.expanded .day-label .chevron { transform: rotate(90deg); }
+  .day-entries { display: none; padding-bottom: 6px; }
+  .day-group.expanded .day-entries { display: block; }
+
+  .entry {
+    padding: 12px 2px;
+    border-top: 1px solid var(--cream-line);
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--ink-text);
+    position: relative;
+  }
+  .entry-text { white-space: pre-wrap; }
+  .entry .loc {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--navy-soft);
+    margin-top: 5px;
+  }
+  .entry-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 7px;
+  }
+  .entry-actions button {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--ink-text-soft);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .entry-actions button.delete-btn:hover { color: var(--danger); }
+
+  .edit-area textarea {
+    width: 100%;
+    font-family: 'EB Garamond', serif;
+    font-size: 17px;
+    color: var(--ink-text);
+    background: var(--cream);
+    border: 1px solid var(--navy-soft);
+    border-radius: 5px;
+    padding: 8px 10px;
+    resize: vertical;
+    outline: none;
+  }
+  .edit-area .loc-input {
+    border: 1px solid var(--cream-line);
+    border-radius: 4px;
+    padding: 5px 8px;
+    margin-top: 6px;
+  }
+  .edit-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .edit-actions button {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid var(--cream-line);
+    background: transparent;
+    color: var(--ink-text-soft);
+  }
+  .edit-actions button.primary {
+    background: var(--navy);
+    color: var(--cream);
+    border-color: var(--navy);
+  }
+
+  .pending-tag {
+    font-size: 10px;
+    color: var(--navy-soft);
+    font-family: 'Inter', sans-serif;
+    margin-left: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="app-header">
+    <div class="app-title">Story Library</div>
+    <button class="sync-btn" id="syncBtn">Sync</button>
+  </div>
+  <div class="sync-status" id="syncStatus"><span class="dot"></span> Local only — Notion sync not yet connected</div>
+
+  <div class="search-wrap">
+    <input type="text" class="search" id="searchInput" placeholder="Search entries…">
+  </div>
+
+  <div class="entry-box">
+    <textarea id="entryText" placeholder="Write today's moment…" rows="2"></textarea>
+    <div class="row">
+      <input type="text" class="loc-input" id="entryLoc" placeholder="+ Add location">
+      <button class="save-pill" id="saveBtn">Save</button>
+    </div>
+  </div>
+
+  <div id="listContainer"></div>
+</div>
+
+<script>
+// ---------- IndexedDB setup ----------
+const DB_NAME = 'story-library';
+const DB_VERSION = 1;
+const STORE = 'entries';
+let db;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE)) {
+        const store = database.createObjectStore(STORE, { keyPath: 'id' });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function txStore(mode) {
+  return db.transaction(STORE, mode).objectStore(STORE);
+}
+
+function dbGetAll() {
+  return new Promise((resolve, reject) => {
+    const req = txStore('readonly').getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbPut(entry) {
+  return new Promise((resolve, reject) => {
+    const req = txStore('readwrite').put(entry);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbDelete(id) {
+  return new Promise((resolve, reject) => {
+    const req = txStore('readwrite').delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e);
+  });
+}
+
+// ---------- Helpers ----------
+function uid() {
+  return 'e_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function dateKey(ts) {
+  const d = new Date(ts);
+  return d.toISOString().slice(0, 10); // YYYY-MM-DD, local-agnostic enough for grouping
+}
+
+function formatDateLabel(dkey) {
+  const d = new Date(dkey + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDow(dkey) {
+  const d = new Date(dkey + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- State ----------
+let allEntries = [];
+let expandedDays = new Set(); // dateKeys currently expanded
+let editingId = null;
+
+// ---------- Render ----------
+function groupByDay(entries) {
+  const groups = {};
+  for (const e of entries) {
+    const k = dateKey(e.timestamp);
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(e);
+  }
+  // sort entries within day by timestamp desc
+  for (const k in groups) groups[k].sort((a, b) => b.timestamp - a.timestamp);
+  return groups;
+}
+
+function render() {
+  const container = document.getElementById('listContainer');
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  let entries = allEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
+
+  if (query) {
+    const matches = entries.filter(e =>
+      e.text.toLowerCase().includes(query) ||
+      (e.location && e.location.toLowerCase().includes(query))
+    );
+    if (matches.length === 0) {
+      container.innerHTML = `<div class="empty-state">No entries match “${escapeHtml(query)}.”</div>`;
+      return;
+    }
+    container.innerHTML = matches.map(e => renderEntryFlat(e)).join('');
+    attachEntryHandlers();
+    return;
+  }
+
+  if (entries.length === 0) {
+    container.innerHTML = `<div class="empty-state">Nothing here yet. What was today's storyworthy moment?</div>`;
+    return;
+  }
+
+  const groups = groupByDay(entries);
+  const dayKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  container.innerHTML = dayKeys.map(k => {
+    const dayEntries = groups[k];
+    const isExpanded = expandedDays.has(k);
+    return `
+      <div class="day-group ${isExpanded ? 'expanded' : ''}" data-day="${k}">
+        <div class="day-label" data-toggle="${k}">
+          <span class="date">${formatDateLabel(k)}</span>
+          <span class="dow">${formatDow(k)}</span>
+          <span class="count">· ${dayEntries.length} ${dayEntries.length === 1 ? 'entry' : 'entries'}</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="day-entries">
+          ${dayEntries.map(e => renderEntry(e)).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('click', () => {
+      const k = el.getAttribute('data-toggle');
+      if (expandedDays.has(k)) expandedDays.delete(k); else expandedDays.add(k);
+      render();
+    });
+  });
+  attachEntryHandlers();
+}
+
+function renderEntry(e) {
+  if (editingId === e.id) return renderEditForm(e);
+  return `
+    <div class="entry" data-id="${e.id}">
+      <div class="entry-text">${escapeHtml(e.text)}</div>
+      ${e.location ? `<div class="loc">● ${escapeHtml(e.location)}</div>` : ''}
+      <div class="entry-actions">
+        <button class="edit-btn" data-id="${e.id}">Edit</button>
+        <button class="delete-btn" data-id="${e.id}">Delete</button>
+        ${!e.synced ? '<span class="pending-tag">pending sync</span>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderEntryFlat(e) {
+  if (editingId === e.id) {
+    return `<div class="day-group expanded" style="border-bottom:1px solid var(--cream-line);">
+      <div class="day-label"><span class="date">${formatDateLabel(dateKey(e.timestamp))}</span><span class="dow">${formatDow(dateKey(e.timestamp))}</span></div>
+      <div class="day-entries" style="display:block;">${renderEditForm(e)}</div>
+    </div>`;
+  }
+  return `
+    <div class="day-group expanded" style="border-bottom:1px solid var(--cream-line);">
+      <div class="day-label"><span class="date">${formatDateLabel(dateKey(e.timestamp))}</span><span class="dow">${formatDow(dateKey(e.timestamp))}</span></div>
+      <div class="day-entries" style="display:block;">
+        <div class="entry" data-id="${e.id}">
+          <div class="entry-text">${escapeHtml(e.text)}</div>
+          ${e.location ? `<div class="loc">● ${escapeHtml(e.location)}</div>` : ''}
+          <div class="entry-actions">
+            <button class="edit-btn" data-id="${e.id}">Edit</button>
+            <button class="delete-btn" data-id="${e.id}">Delete</button>
+            ${!e.synced ? '<span class="pending-tag">pending sync</span>' : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderEditForm(e) {
+  return `
+    <div class="entry edit-area" data-id="${e.id}">
+      <textarea rows="3" id="edit-text-${e.id}">${escapeHtml(e.text)}</textarea>
+      <input type="text" class="loc-input" id="edit-loc-${e.id}" placeholder="+ Add location" value="${escapeHtml(e.location || '')}">
+      <div class="edit-actions">
+        <button class="primary" data-save="${e.id}">Save changes</button>
+        <button data-cancel="${e.id}">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+function attachEntryHandlers() {
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      editingId = btn.getAttribute('data-id');
+      render();
+    });
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const id = btn.getAttribute('data-id');
+      if (confirm('Delete this entry? This can\'t be undone.')) {
+        await dbDelete(id);
+        allEntries = allEntries.filter(e => e.id !== id);
+        render();
+      }
+    });
+  });
+  document.querySelectorAll('[data-save]').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      const id = btn.getAttribute('data-save');
+      const text = document.getElementById(`edit-text-${id}`).value.trim();
+      const loc = document.getElementById(`edit-loc-${id}`).value.trim();
+      if (!text) return;
+      const entry = allEntries.find(e => e.id === id);
+      entry.text = text;
+      entry.location = loc || null;
+      entry.synced = false; // edited locally, needs re-sync
+      await dbPut(entry);
+      editingId = null;
+      render();
+    });
+  });
+  document.querySelectorAll('[data-cancel]').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      editingId = null;
+      render();
+    });
+  });
+}
+
+// ---------- Save new entry ----------
+async function saveNewEntry() {
+  const textEl = document.getElementById('entryText');
+  const locEl = document.getElementById('entryLoc');
+  const text = textEl.value.trim();
+  if (!text) return;
+  const now = Date.now();
+  const entry = {
+    id: uid(),
+    text,
+    location: locEl.value.trim() || null,
+    timestamp: now,
+    synced: false
+  };
+  await dbPut(entry);
+  allEntries.push(entry);
+  textEl.value = '';
+  locEl.value = '';
+  // leave today's group collapsed per default behavior; user can tap to view
+  render();
+}
+
+// ---------- Sync (live — talks to the Cloudflare Worker) ----------
+const SYNC_ENDPOINT = 'https://story-library-sync.jehartwick.workers.dev';
+
+function updateSyncStatus(message) {
+  const pending = allEntries.filter(e => !e.synced).length;
+  const statusEl = document.getElementById('syncStatus');
+  if (message) {
+    statusEl.innerHTML = `<span class="dot"></span> ${message}`;
+    return;
+  }
+  if (pending === 0 && allEntries.length > 0) {
+    statusEl.innerHTML = `<span class="dot"></span> All entries synced to Notion`;
+  } else if (pending > 0) {
+    statusEl.innerHTML = `<span class="dot"></span> ${pending} ${pending === 1 ? 'entry' : 'entries'} waiting to sync`;
+  } else {
+    statusEl.innerHTML = `<span class="dot"></span> No entries yet`;
+  }
+}
+
+function toNotionPayload(e) {
+  const d = new Date(e.timestamp);
+  return {
+    id: e.id,
+    text: e.text,
+    date: dateKey(e.timestamp), // YYYY-MM-DD
+    day_of_week: formatDow(dateKey(e.timestamp)),
+    location: e.location || '',
+    notion_page_id: e.notion_page_id || undefined,
+  };
+}
+
+async function syncNow() {
+  const pending = allEntries.filter(e => !e.synced);
+  if (pending.length === 0) {
+    updateSyncStatus('Already up to date');
+    setTimeout(() => updateSyncStatus(), 2000);
+    return;
+  }
+
+  const syncBtn = document.getElementById('syncBtn');
+  syncBtn.disabled = true;
+  syncBtn.textContent = 'Syncing…';
+  updateSyncStatus(`Syncing ${pending.length} ${pending.length === 1 ? 'entry' : 'entries'}…`);
+
+  try {
+    const res = await fetch(SYNC_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entries: pending.map(toNotionPayload) }),
+    });
+
+    if (!res.ok) throw new Error(`Server responded ${res.status}`);
+    const data = await res.json();
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const result of data.results) {
+      const entry = allEntries.find(e => e.id === result.id);
+      if (!entry) continue;
+      if (result.ok) {
+        entry.synced = true;
+        entry.notion_page_id = result.notion_page_id;
+        await dbPut(entry);
+        successCount++;
+      } else {
+        failCount++;
+        console.error(`Sync failed for entry ${result.id}:`, result.error);
+      }
+    }
+
+    render();
+    if (failCount === 0) {
+      updateSyncStatus(`✓ ${successCount} ${successCount === 1 ? 'entry' : 'entries'} synced to Notion`);
+    } else {
+      updateSyncStatus(`${successCount} synced, ${failCount} failed — will retry next sync`);
+    }
+    setTimeout(() => updateSyncStatus(), 4000);
+  } catch (err) {
+    console.error('Sync error:', err);
+    updateSyncStatus('Sync failed — check your connection and try again');
+    setTimeout(() => updateSyncStatus(), 4000);
+  } finally {
+    syncBtn.disabled = false;
+    syncBtn.textContent = 'Sync';
+  }
+}
+
+document.getElementById('syncBtn').addEventListener('click', syncNow);
+
+// Auto-attempt sync on load if online and there's pending data
+window.addEventListener('load', () => {
+  if (navigator.onLine) {
+    setTimeout(syncNow, 800);
+  }
+});
+
+// ---------- Init ----------
+document.getElementById('saveBtn').addEventListener('click', saveNewEntry);
+document.getElementById('entryText').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    saveNewEntry();
+  }
+});
+document.getElementById('searchInput').addEventListener('input', render);
+
+(async function init() {
+  await openDB();
+  allEntries = await dbGetAll();
+  render();
+  updateSyncStatus();
+})();
+</script>
+
+</body>
+</html>
