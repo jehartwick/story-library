@@ -114,6 +114,22 @@
     align-items: center;
     margin-top: 8px;
     gap: 10px;
+    flex-wrap: wrap;
+  }
+  .date-input {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-text-soft);
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+  .meta-fields {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
   }
   .loc-input {
     flex: 1;
@@ -276,9 +292,12 @@
   </div>
 
   <div class="entry-box">
-    <textarea id="entryText" placeholder="Write today's moment…" rows="2"></textarea>
+    <textarea id="entryText" placeholder="Story time…" rows="2"></textarea>
     <div class="row">
-      <input type="text" class="loc-input" id="entryLoc" placeholder="+ Add location">
+      <div class="meta-fields">
+        <input type="date" class="date-input" id="entryDate">
+        <input type="text" class="loc-input" id="entryLoc" placeholder="+ Add location">
+      </div>
       <button class="save-pill" id="saveBtn">Save</button>
     </div>
   </div>
@@ -348,7 +367,10 @@ function timestampFromNotionDate(dateStr) {
 
 function dateKey(ts) {
   const d = new Date(ts);
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD, local-agnostic enough for grouping
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatDateLabel(dkey) {
@@ -554,22 +576,41 @@ function attachEntryHandlers() {
 async function saveNewEntry() {
   const textEl = document.getElementById('entryText');
   const locEl = document.getElementById('entryLoc');
+  const dateEl = document.getElementById('entryDate');
   const text = textEl.value.trim();
   if (!text) return;
-  const now = Date.now();
+
+  const now = new Date();
+  let timestamp = now.getTime();
+  if (dateEl.value) {
+    const [y, m, d] = dateEl.value.split('-').map(Number);
+    const chosen = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds());
+    timestamp = chosen.getTime();
+  }
+
   const entry = {
     id: uid(),
     text,
     location: locEl.value.trim() || null,
-    timestamp: now,
+    timestamp,
     synced: false
   };
   await dbPut(entry);
   allEntries.push(entry);
   textEl.value = '';
   locEl.value = '';
+  setDefaultEntryDate();
   // leave today's group collapsed per default behavior; user can tap to view
   render();
+}
+
+function setDefaultEntryDate() {
+  const dateEl = document.getElementById('entryDate');
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  dateEl.value = `${y}-${m}-${d}`;
 }
 
 // ---------- Sync (live — talks to the Cloudflare Worker) ----------
@@ -719,6 +760,7 @@ document.getElementById('searchInput').addEventListener('input', render);
 (async function init() {
   await openDB();
   allEntries = await dbGetAll();
+  setDefaultEntryDate();
   render();
   updateSyncStatus();
   if (navigator.onLine) {
