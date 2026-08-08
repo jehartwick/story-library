@@ -253,6 +253,13 @@
     font-family: 'Inter', sans-serif;
     margin-left: 4px;
   }
+  .synced-tag {
+    font-size: 10px;
+    color: var(--ink-text-soft);
+    font-family: 'Inter', sans-serif;
+    margin-left: 4px;
+    opacity: 0.6;
+  }
 </style>
 </head>
 <body>
@@ -332,6 +339,11 @@ function dbDelete(id) {
 // ---------- Helpers ----------
 function uid() {
   return 'e_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function timestampFromNotionDate(dateStr) {
+  // dateStr is 'YYYY-MM-DD'; anchor at noon local to avoid day-shift on grouping
+  return new Date(dateStr + 'T12:00:00').getTime();
 }
 
 function dateKey(ts) {
@@ -438,7 +450,7 @@ function renderEntry(e) {
       <div class="entry-actions">
         <button class="edit-btn" data-id="${e.id}">Edit</button>
         <button class="delete-btn" data-id="${e.id}">Delete</button>
-        ${!e.synced ? '<span class="pending-tag">pending sync</span>' : ''}
+        ${!e.synced ? '<span class="pending-tag">pending sync</span>' : '<span class="synced-tag">✓ synced</span>'}
       </div>
     </div>
   `;
@@ -461,7 +473,7 @@ function renderEntryFlat(e) {
           <div class="entry-actions">
             <button class="edit-btn" data-id="${e.id}">Edit</button>
             <button class="delete-btn" data-id="${e.id}">Delete</button>
-            ${!e.synced ? '<span class="pending-tag">pending sync</span>' : ''}
+            ${!e.synced ? '<span class="pending-tag">pending sync</span>' : '<span class="synced-tag">✓ synced</span>'}
           </div>
         </div>
       </div>
@@ -638,6 +650,43 @@ async function syncNow() {
 
 document.getElementById('syncBtn').addEventListener('click', syncNow);
 
+// ---------- Pull existing entries from Notion (for new/other devices) ----------
+async function pullFromNotion() {
+  try {
+    const res = await fetch(SYNC_ENDPOINT + '/entries', { method: 'GET' });
+    if (!res.ok) throw new Error(`Server responded ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data.entries)) return;
+
+    const knownPageIds = new Set(allEntries.filter(e => e.notion_page_id).map(e => e.notion_page_id));
+    let added = 0;
+
+    for (const remote of data.entries) {
+      if (!remote.notion_page_id || knownPageIds.has(remote.notion_page_id)) continue;
+      if (!remote.text || !remote.date) continue;
+      const entry = {
+        id: uid(),
+        text: remote.text,
+        location: remote.location || null,
+        timestamp: timestampFromNotionDate(remote.date),
+        synced: true,
+        notion_page_id: remote.notion_page_id,
+      };
+      await dbPut(entry);
+      allEntries.push(entry);
+      added++;
+    }
+
+    if (added > 0) {
+      render();
+      updateSyncStatus(`Loaded ${added} ${added === 1 ? 'entry' : 'entries'} from Notion`);
+      setTimeout(() => updateSyncStatus(), 3000);
+    }
+  } catch (err) {
+    console.error('Pull from Notion failed:', err);
+  }
+}
+
 // Auto-attempt sync on load if online and there's pending data
 window.addEventListener('load', () => {
   if (navigator.onLine) {
@@ -660,6 +709,10 @@ document.getElementById('searchInput').addEventListener('input', render);
   allEntries = await dbGetAll();
   render();
   updateSyncStatus();
+  if (navigator.onLine) {
+    await pullFromNotion();
+    render();
+  }
 })();
 </script>
 
