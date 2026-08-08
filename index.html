@@ -507,6 +507,18 @@ function attachEntryHandlers() {
       ev.stopPropagation();
       const id = btn.getAttribute('data-id');
       if (confirm('Delete this entry? This can\'t be undone.')) {
+        const entry = allEntries.find(e => e.id === id);
+        if (entry && entry.notion_page_id) {
+          try {
+            await fetch(SYNC_ENDPOINT + '/entries', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notion_page_id: entry.notion_page_id }),
+            });
+          } catch (err) {
+            console.error('Failed to delete from Notion:', err);
+          }
+        }
         await dbDelete(id);
         allEntries = allEntries.filter(e => e.id !== id);
         render();
